@@ -15,7 +15,7 @@ import           Database.Persist (entityVal)
 import           Network.Wai.Handler.Warp (run)
 import           Servant.API
 import           Servant.Server
-import           Database (fetchUserPG, createUserPG, localConnString, updateUserPG, deleteUserPG, fetchAllUsersPG, insertManyUsersPG)
+import           Database (fetchUserPG, createUserPG, localConnString, updateUserPG, deleteUserPG, fetchAllUsersPG, insertManyUsersPG, fetchUserOccupationPG)
 import           BasicSchema
 
 -- endpoints 
@@ -26,6 +26,7 @@ type UsersAPI =
   :<|> "users" :> Capture "userid" Int64 :> Delete '[JSON] SuccessResponse
   :<|> "users" :> Get '[JSON] [User]
   :<|> "insertusers" :> ReqBody '[JSON] UserRequest :> Post '[JSON] SuccessResponse
+  :<|> "users" :> Capture "occupation" String :> Get '[JSON] [User]
 
 usersAPI :: Proxy UsersAPI
 usersAPI = Proxy :: Proxy UsersAPI
@@ -76,6 +77,12 @@ insertManyUsersHandler connString usrReq = do
   _ <- liftIO $ insertManyUsersPG connString userlist
   return SuccessResponse { message = "All Insert done successfully!" }
 
+-- filter users according to occupation
+filterUsersHandler :: ConnectionString -> String -> Handler [User]
+filterUsersHandler connString occupation = do  
+  entities <- liftIO $ fetchUserOccupationPG connString occupation
+  let usersresult = map entityVal entities
+  return usersresult
 
 usersServer :: ConnectionString -> Server UsersAPI
 usersServer connString =
@@ -84,7 +91,8 @@ usersServer connString =
   updateUserHandler connString :<|>
   deleteUserHandler connString :<|>
   fetchAllUsersHandler connString :<|>
-  insertManyUsersHandler connString
+  insertManyUsersHandler connString :<|>
+  filterUsersHandler connString
 
 runServer :: IO ()
 runServer = run 8000 (serve usersAPI (usersServer localConnString))

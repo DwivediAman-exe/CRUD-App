@@ -9,6 +9,8 @@ import           Data.Int (Int64)
 import           Database.Persist
 import           Database.Persist.Postgresql 
 import           BasicSchema
+import           Data.Text (pack)
+
 
 type PGInfo = ConnectionString
 
@@ -66,3 +68,7 @@ insertManyUsersPG connString userslist = do
   -- logValue users
   _ <- runAction connString (insertMany_ userslist)
   return SuccessResponse { message = "All records inserted successfully!" }
+
+-- query to fetch user qccording to their occupation
+fetchUserOccupationPG :: PGInfo -> String -> IO [Entity User]
+fetchUserOccupationPG connString occupation = runAction connString (selectList [UserOccupation ==. pack occupation] [])
