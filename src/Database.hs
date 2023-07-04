@@ -5,7 +5,6 @@ module Database where
 
 import           Control.Monad.Logger
 import           Control.Monad.Reader (runReaderT)
-import           Control.Monad.IO.Class (MonadIO)
 import           Data.Int (Int64)
 import           Database.Persist
 import           Database.Persist.Postgresql 
@@ -37,13 +36,13 @@ logFilter _ LevelDebug     = False
 logFilter _ (LevelOther _) = False
 
 -- fetch fuunction that select users with age less then 25 and occupation as teacher
-selectYoungTeachers :: (MonadIO m) => SqlPersistT m [Entity User]
-selectYoungTeachers = selectList [UserAge <. 25, UserOccupation ==. "Teacher"] []
+fetchAllUsersPG :: PGInfo -> IO [Entity User]
+fetchAllUsersPG connString = runAction connString (selectList [] [])
 
 -- using different filters 
-selectYoungTeachers' :: (MonadIO m) => SqlPersistT m [Entity User]
-selectYoungTeachers' = selectList
-  [UserAge <. 25, UserOccupation ==. "Teacher"] [Asc UserEmail, OffsetBy 5, LimitTo 100]
+-- selectYoungTeachers' :: (MonadIO m) => SqlPersistT m [Entity User]
+-- selectYoungTeachers' = selectList
+--   [UserAge <. 25, UserOccupation ==. "Teacher"] [Asc UserEmail, OffsetBy 5, LimitTo 100]
 
 -- fetching a user from DB
 fetchUserPG :: PGInfo -> Int64 -> IO (Maybe User)

@@ -2,7 +2,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE DeriveGeneric #-}
 
 module BasicServer where
 
@@ -11,10 +10,11 @@ import           Control.Monad.Trans.Except (throwE)
 import           Data.Int (Int64)
 import           Data.Proxy (Proxy(..))
 import           Database.Persist.Postgresql (ConnectionString)
+import           Database.Persist (entityVal)
 import           Network.Wai.Handler.Warp (run)
 import           Servant.API
 import           Servant.Server
-import           Database (fetchUserPG, createUserPG, localConnString, updateUserPG, deleteUserPG, insertManyUsersPG)
+import           Database (fetchUserPG, createUserPG, localConnString, updateUserPG, deleteUserPG, fetchAllUsersPG)
 import           BasicSchema
 
 -- endpoints 
@@ -23,6 +23,7 @@ type UsersAPI =
   :<|> "users" :> ReqBody '[JSON] User :> Post '[JSON] Int64
   :<|> "users" :> Capture "userid" Int64 :> ReqBody '[JSON] User :> Post '[JSON] SuccessResponse 
   :<|> "users" :> Capture "userid" Int64 :> Delete '[JSON] SuccessResponse 
+  :<|> "users" :> Get '[JSON] [User]
   -- :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] SuccessResponse
 
 
@@ -61,6 +62,13 @@ deleteUserHandler connString uid = do
         return SuccessResponse { message = "Deleted successful!" }
     Nothing -> return SuccessResponse { message = "Could not find user with that ID" } 
 
+fetchAllUsersHandler ::  ConnectionString -> Handler [User]
+fetchAllUsersHandler connString = do
+  entities <- liftIO $ fetchAllUsersPG connString
+  let users = map entityVal entities
+  return users
+
+
 -- insertMany users 
 -- insertManyUsersHandler :: ConnectionString -> UserRequest -> Handler SuccessResponse
 -- insertManyUsersHandler connString usrReq = do
@@ -74,7 +82,8 @@ usersServer connString =
   fetchUsersHandler connString :<|>
   createUserHandler connString :<|>
   updateUserHandler connString :<|>
-  deleteUserHandler connString 
+  deleteUserHandler connString :<|>
+  fetchAllUsersHandler connString
   -- :<|>
   -- insertManyUsersHandler connString
 
