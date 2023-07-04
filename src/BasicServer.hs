@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module BasicServer where
 
@@ -14,18 +15,17 @@ import           Database.Persist (entityVal)
 import           Network.Wai.Handler.Warp (run)
 import           Servant.API
 import           Servant.Server
-import           Database (fetchUserPG, createUserPG, localConnString, updateUserPG, deleteUserPG, fetchAllUsersPG)
+import           Database (fetchUserPG, createUserPG, localConnString, updateUserPG, deleteUserPG, fetchAllUsersPG, insertManyUsersPG)
 import           BasicSchema
 
 -- endpoints 
 type UsersAPI =
        "users" :> Capture "userid" Int64 :> Get '[JSON] User
   :<|> "users" :> ReqBody '[JSON] User :> Post '[JSON] Int64
-  :<|> "users" :> Capture "userid" Int64 :> ReqBody '[JSON] User :> Post '[JSON] SuccessResponse 
-  :<|> "users" :> Capture "userid" Int64 :> Delete '[JSON] SuccessResponse 
+  :<|> "users" :> Capture "userid" Int64 :> ReqBody '[JSON] User :> Post '[JSON] SuccessResponse
+  :<|> "users" :> Capture "userid" Int64 :> Delete '[JSON] SuccessResponse
   :<|> "users" :> Get '[JSON] [User]
-  -- :<|> "users" :> ReqBody '[JSON] UserRequest :> Post '[JSON] SuccessResponse
-
+  :<|> "insertusers" :> ReqBody '[JSON] UserRequest :> Post '[JSON] SuccessResponse
 
 usersAPI :: Proxy UsersAPI
 usersAPI = Proxy :: Proxy UsersAPI
@@ -50,7 +50,7 @@ updateUserHandler connString uid user = do
     Just _ -> do
         _ <- liftIO $ updateUserPG connString uid user
         return SuccessResponse { message = "Update successful!" }
-    Nothing -> return SuccessResponse { message = "Could not find user with that ID" } 
+    Nothing -> return SuccessResponse { message = "Could not find user with that ID" }
 
 -- delete handler
 deleteUserHandler :: ConnectionString -> Int64 -> Handler SuccessResponse
@@ -60,21 +60,21 @@ deleteUserHandler connString uid = do
     Just _ -> do
         _ <- liftIO $ deleteUserPG connString uid
         return SuccessResponse { message = "Deleted successful!" }
-    Nothing -> return SuccessResponse { message = "Could not find user with that ID" } 
+    Nothing -> return SuccessResponse { message = "Could not find user with that ID" }
 
+-- fetch all users handler
 fetchAllUsersHandler ::  ConnectionString -> Handler [User]
 fetchAllUsersHandler connString = do
   entities <- liftIO $ fetchAllUsersPG connString
-  let users = map entityVal entities
-  return users
-
+  let usersresult = map entityVal entities
+  return usersresult
 
 -- insertMany users 
--- insertManyUsersHandler :: ConnectionString -> UserRequest -> Handler SuccessResponse
--- insertManyUsersHandler connString usrReq = do
---   _ <- liftIO $ print (show usrReq)
---   _ <- liftIO $ insertManyUsersPG connString usrReq
---   return SuccessResponse { message = "All Insert done successfully!" }
+insertManyUsersHandler :: ConnectionString -> UserRequest -> Handler SuccessResponse
+insertManyUsersHandler connString usrReq = do
+  let userlist = users usrReq
+  _ <- liftIO $ insertManyUsersPG connString userlist
+  return SuccessResponse { message = "All Insert done successfully!" }
 
 
 usersServer :: ConnectionString -> Server UsersAPI
@@ -83,9 +83,8 @@ usersServer connString =
   createUserHandler connString :<|>
   updateUserHandler connString :<|>
   deleteUserHandler connString :<|>
-  fetchAllUsersHandler connString
-  -- :<|>
-  -- insertManyUsersHandler connString
+  fetchAllUsersHandler connString :<|>
+  insertManyUsersHandler connString
 
 runServer :: IO ()
 runServer = run 8000 (serve usersAPI (usersServer localConnString))

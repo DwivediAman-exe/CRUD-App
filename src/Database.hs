@@ -39,11 +39,6 @@ logFilter _ (LevelOther _) = False
 fetchAllUsersPG :: PGInfo -> IO [Entity User]
 fetchAllUsersPG connString = runAction connString (selectList [] [])
 
--- using different filters 
--- selectYoungTeachers' :: (MonadIO m) => SqlPersistT m [Entity User]
--- selectYoungTeachers' = selectList
---   [UserAge <. 25, UserOccupation ==. "Teacher"] [Asc UserEmail, OffsetBy 5, LimitTo 100]
-
 -- fetching a user from DB
 fetchUserPG :: PGInfo -> Int64 -> IO (Maybe User)
 fetchUserPG connString uid = runAction connString (get (toSqlKey uid))
@@ -66,7 +61,8 @@ deleteUserPG connString uid = runAction connString (delete userKey)
     userKey = toSqlKey uid
 
 -- insert Many users
--- insertManyUsersPG :: PGInfo -> UserRequest -> IO SuccessResponse
--- insertManyUsersPG connString (UserRequest users) = do 
---   _ <- runAction connString (insertMany_ users)
---   return SuccessResponse { message = "Update successful!" }
+insertManyUsersPG :: PGInfo -> [User] -> IO SuccessResponse
+insertManyUsersPG connString userslist = do 
+  -- logValue users
+  _ <- runAction connString (insertMany_ userslist)
+  return SuccessResponse { message = "All records inserted successfully!" }

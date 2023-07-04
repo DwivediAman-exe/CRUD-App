@@ -73,13 +73,14 @@ data SuccessResponse = SuccessResponse
 instance ToJSON SuccessResponse
 instance FromJSON SuccessResponse
 
--- data UserRequest = UserRequest
---   {
---      users :: [User]
---   } deriving (Generic, Show)
+data UserRequest = UserRequest
+  {
+     users :: [User]
+  } 
+  deriving (Generic, Show)
 
--- instance FromJSON UserRequest where
---   parseJSON value = do
---     obj <- parseJSON value
---     UserRequest <$> obj .:? "users" .!= []
+instance ToJSON UserRequest
+instance FromJSON UserRequest
 
+logValue :: (Show a) => a -> IO ()
+logValue value = print $ show value
